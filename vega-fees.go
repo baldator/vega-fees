@@ -23,6 +23,8 @@ func main() {
 
 	// Parse command line parameters
 	createDB := flag.Bool("createDB", false, "Create the DB structure based on the ORM structure.")
+	feesUpdate := flag.Bool("feesUpdate", false, "Import fees from Vega gRPC API.")
+	klinesUpdate := flag.Bool("klinesUpdate", false, "Import crypto market historical data from Binance")
 	flag.Parse()
 
 	// Initialize DB
@@ -60,168 +62,167 @@ func main() {
 		panic(err)
 	}
 
-	// marketID := "076BB86A5AA41E3E"
-	// pagination := api.Pagination{
-	// 	Descending: false,
-	// 	Skip:       uint64(9800),
-	// 	Limit:      50,
-	// }
+	if *klinesUpdate {
+		err = getBinanceKlines(db)
+		if err != nil {
+			panic(err)
+		}
+	}
 
-	// tradesByMarketReq := api.TradesByMarketRequest{MarketId: marketID, Pagination: &pagination}
-	// tradesByMarketResp, err := dataClient.TradesByMarket(context.Background(), &tradesByMarketReq)
-	// fmt.Printf("%+v\n", tradesByMarketResp)
+	if *feesUpdate {
 
-	for _, element := range markets.Markets {
-		// index is the index where we are
-		// element is the element from someSlice for where we are
+		for _, element := range markets.Markets {
+			// index is the index where we are
+			// element is the element from someSlice for where we are
 
-		//fmt.Printf("Market[%d]: %+v \n\n", index, element)
-		log.Printf("Importing fees for market: %+s \n\n", element.TradableInstrument.Instrument.Name)
+			//fmt.Printf("Market[%d]: %+v \n\n", index, element)
+			log.Printf("Importing fees for market: %+s \n\n", element.TradableInstrument.Instrument.Name)
 
-		// Check if market already exist
-		if !marketExists(element.Id, db) {
-			err = createMarket(element.Id, element.TradableInstrument.Instrument.Name, element.DecimalPlaces, element.TradableInstrument.Instrument.GetFuture().SettlementAsset, db)
+			// Check if market already exist
+			if !marketExists(element.Id, db) {
+				err = createMarket(element.Id, element.TradableInstrument.Instrument.Name, element.DecimalPlaces, element.TradableInstrument.Instrument.GetFuture().SettlementAsset, db)
+				if err != nil {
+					panic(err)
+				}
+
+			}
+
+			market, err := getMarket(element.Id, db)
 			if err != nil {
 				panic(err)
 			}
 
-		}
+			exitLoop := false
+			offset := market.Offset
 
-		market, err := getMarket(element.Id, db)
-		if err != nil {
-			panic(err)
-		}
+			var tmpFee = &Fee15Min{}
+			marketID := market.VegaId
 
-		exitLoop := false
-		offset := market.Offset
-
-		var tmpFee = &Fee15Min{}
-		marketID := market.VegaId
-
-		if market.Fees != nil {
-			tmpFee = market.Fees[len(market.Fees)-1]
-		} else {
-			tmpFee.Time = 0
-			tmpFee.Id = 0
-			tmpFee.SellInfrastructureFee = 0
-			tmpFee.SellLiquidityFee = 0
-			tmpFee.SellMakerFee = 0
-			tmpFee.BuyInfrastructureFee = 0
-			tmpFee.BuyLiquidityFee = 0
-			tmpFee.BuyMakerFee = 0
-			tmpFee.VegaMarketID = element.Id
-		}
-
-		for !exitLoop {
-			pagination := api.Pagination{
-				Descending: false,
-				Skip:       uint64(offset),
-				Limit:      offsetPagination,
-			}
-
-			tradesByMarketReq := api.TradesByMarketRequest{MarketId: marketID, Pagination: &pagination}
-			tradesByMarketResp, err := dataClient.TradesByMarket(context.Background(), &tradesByMarketReq)
-
-			if err != nil {
-				break
-			}
-
-			for index, trade := range tradesByMarketResp.Trades {
-				tradeTime := floor15minutes(trade.Timestamp)
-				if tradeTime != tmpFee.Time {
-
-					// if tmpFee is not empty store it to DB
-					if tmpFee.Time > 0 {
-						log.Printf("Add fee to DB. Timestamp: %d. New timeframe: %d\n", trade.Timestamp, tradeTime)
-
-						prevFee, err := getFeeByTimestamp(tmpFee, db)
-						if err != nil {
-							panic(err)
-						}
-						if prevFee != nil {
-							tmpFee.Id = prevFee.Id
-							tmpFee.SellInfrastructureFee = tmpFee.SellInfrastructureFee + prevFee.SellInfrastructureFee
-							tmpFee.SellLiquidityFee = tmpFee.SellLiquidityFee + prevFee.SellLiquidityFee
-							tmpFee.SellMakerFee = tmpFee.SellMakerFee + prevFee.SellMakerFee
-							tmpFee.BuyInfrastructureFee = tmpFee.BuyInfrastructureFee + prevFee.BuyInfrastructureFee
-							tmpFee.BuyLiquidityFee = tmpFee.BuyLiquidityFee + prevFee.BuyLiquidityFee
-							tmpFee.BuyMakerFee = tmpFee.BuyMakerFee + prevFee.BuyMakerFee
-						}
-
-						err = updateFees(tmpFee, db)
-						if err != nil {
-							panic(err)
-						}
-
-						market.Offset = offset + int64(index)
-						err = updateMarket(market, db)
-						if err != nil {
-							panic(err)
-						}
-
-					}
-
-					// check if fees already exists
-					tmpFee.BuyInfrastructureFee = 0
-					tmpFee.BuyMakerFee = 0
-					tmpFee.BuyLiquidityFee = 0
-					tmpFee.SellInfrastructureFee = 0
-					tmpFee.SellMakerFee = 0
-					tmpFee.SellLiquidityFee = 0
-					tmpFee.Time = tradeTime
-					tmpFee.VegaMarketID = element.Id
-
-					tmpFee.Id = 0
-				}
-
-				// log.Println(trade)
-				if tradeTime == tmpFee.Time {
-					if trade.BuyerFee != nil {
-						tmpFee.BuyInfrastructureFee = tmpFee.BuyInfrastructureFee + trade.BuyerFee.InfrastructureFee
-						tmpFee.BuyLiquidityFee = tmpFee.BuyLiquidityFee + trade.BuyerFee.LiquidityFee
-						tmpFee.BuyMakerFee = tmpFee.BuyMakerFee + trade.BuyerFee.MakerFee
-					}
-					if trade.SellerFee != nil {
-						tmpFee.SellInfrastructureFee = tmpFee.SellInfrastructureFee + trade.SellerFee.InfrastructureFee
-						tmpFee.SellLiquidityFee = tmpFee.SellLiquidityFee + trade.SellerFee.LiquidityFee
-						tmpFee.SellMakerFee = tmpFee.SellMakerFee + trade.SellerFee.MakerFee
-					}
-				}
-			}
-
-			if len(tradesByMarketResp.Trades) < offsetPagination {
-				exitLoop = true
-				// save data before exit
-				prevFee, err := getFeeByTimestamp(tmpFee, db)
-				if err != nil {
-					panic(err)
-				}
-				if prevFee != nil {
-					tmpFee.Id = prevFee.Id
-					tmpFee.SellInfrastructureFee = tmpFee.SellInfrastructureFee + prevFee.SellInfrastructureFee
-					tmpFee.SellLiquidityFee = tmpFee.SellLiquidityFee + prevFee.SellLiquidityFee
-					tmpFee.SellMakerFee = tmpFee.SellMakerFee + prevFee.SellMakerFee
-					tmpFee.BuyInfrastructureFee = tmpFee.BuyInfrastructureFee + prevFee.BuyInfrastructureFee
-					tmpFee.BuyLiquidityFee = tmpFee.BuyLiquidityFee + prevFee.BuyLiquidityFee
-					tmpFee.BuyMakerFee = tmpFee.BuyMakerFee + prevFee.BuyMakerFee
-				}
-				err = updateFees(tmpFee, db)
-				if err != nil {
-					panic(err)
-				}
-
-				market.Offset = offset + int64(len(tradesByMarketResp.Trades))
-				err = updateMarket(market, db)
-				if err != nil {
-					panic(err)
-				}
+			if market.Fees != nil {
+				tmpFee = market.Fees[len(market.Fees)-1]
 			} else {
-				offset = offset + offsetPagination
-				log.Printf("Adding %d to offset. Current offset is: %d\n", offsetPagination, offset)
+				tmpFee.Time = 0
+				tmpFee.Id = 0
+				tmpFee.SellInfrastructureFee = 0
+				tmpFee.SellLiquidityFee = 0
+				tmpFee.SellMakerFee = 0
+				tmpFee.BuyInfrastructureFee = 0
+				tmpFee.BuyLiquidityFee = 0
+				tmpFee.BuyMakerFee = 0
+				tmpFee.VegaMarketID = element.Id
+			}
+
+			for !exitLoop {
+				pagination := api.Pagination{
+					Descending: false,
+					Skip:       uint64(offset),
+					Limit:      offsetPagination,
+				}
+
+				tradesByMarketReq := api.TradesByMarketRequest{MarketId: marketID, Pagination: &pagination}
+				tradesByMarketResp, err := dataClient.TradesByMarket(context.Background(), &tradesByMarketReq)
+
+				if err != nil {
+					break
+				}
+
+				for index, trade := range tradesByMarketResp.Trades {
+					tradeTime := floor15minutes(trade.Timestamp)
+					if tradeTime != tmpFee.Time {
+
+						// if tmpFee is not empty store it to DB
+						if tmpFee.Time > 0 {
+							log.Printf("Add fee to DB. Timestamp: %d. New timeframe: %d\n", trade.Timestamp, tradeTime)
+
+							prevFee, err := getFeeByTimestamp(tmpFee, db)
+							if err != nil {
+								panic(err)
+							}
+							if prevFee != nil {
+								tmpFee.Id = prevFee.Id
+								tmpFee.SellInfrastructureFee = tmpFee.SellInfrastructureFee + prevFee.SellInfrastructureFee
+								tmpFee.SellLiquidityFee = tmpFee.SellLiquidityFee + prevFee.SellLiquidityFee
+								tmpFee.SellMakerFee = tmpFee.SellMakerFee + prevFee.SellMakerFee
+								tmpFee.BuyInfrastructureFee = tmpFee.BuyInfrastructureFee + prevFee.BuyInfrastructureFee
+								tmpFee.BuyLiquidityFee = tmpFee.BuyLiquidityFee + prevFee.BuyLiquidityFee
+								tmpFee.BuyMakerFee = tmpFee.BuyMakerFee + prevFee.BuyMakerFee
+							}
+
+							err = updateFees(tmpFee, db)
+							if err != nil {
+								panic(err)
+							}
+
+							market.Offset = offset + int64(index)
+							err = updateMarket(market, db)
+							if err != nil {
+								panic(err)
+							}
+
+						}
+
+						// check if fees already exists
+						tmpFee.BuyInfrastructureFee = 0
+						tmpFee.BuyMakerFee = 0
+						tmpFee.BuyLiquidityFee = 0
+						tmpFee.SellInfrastructureFee = 0
+						tmpFee.SellMakerFee = 0
+						tmpFee.SellLiquidityFee = 0
+						tmpFee.Time = tradeTime
+						tmpFee.VegaMarketID = element.Id
+
+						tmpFee.Id = 0
+					}
+
+					// log.Println(trade)
+					if tradeTime == tmpFee.Time {
+						if trade.BuyerFee != nil {
+							tmpFee.BuyInfrastructureFee = tmpFee.BuyInfrastructureFee + trade.BuyerFee.InfrastructureFee
+							tmpFee.BuyLiquidityFee = tmpFee.BuyLiquidityFee + trade.BuyerFee.LiquidityFee
+							tmpFee.BuyMakerFee = tmpFee.BuyMakerFee + trade.BuyerFee.MakerFee
+						}
+						if trade.SellerFee != nil {
+							tmpFee.SellInfrastructureFee = tmpFee.SellInfrastructureFee + trade.SellerFee.InfrastructureFee
+							tmpFee.SellLiquidityFee = tmpFee.SellLiquidityFee + trade.SellerFee.LiquidityFee
+							tmpFee.SellMakerFee = tmpFee.SellMakerFee + trade.SellerFee.MakerFee
+						}
+					}
+				}
+
+				if len(tradesByMarketResp.Trades) < offsetPagination {
+					exitLoop = true
+					// save data before exit
+					prevFee, err := getFeeByTimestamp(tmpFee, db)
+					if err != nil {
+						panic(err)
+					}
+					if prevFee != nil {
+						tmpFee.Id = prevFee.Id
+						tmpFee.SellInfrastructureFee = tmpFee.SellInfrastructureFee + prevFee.SellInfrastructureFee
+						tmpFee.SellLiquidityFee = tmpFee.SellLiquidityFee + prevFee.SellLiquidityFee
+						tmpFee.SellMakerFee = tmpFee.SellMakerFee + prevFee.SellMakerFee
+						tmpFee.BuyInfrastructureFee = tmpFee.BuyInfrastructureFee + prevFee.BuyInfrastructureFee
+						tmpFee.BuyLiquidityFee = tmpFee.BuyLiquidityFee + prevFee.BuyLiquidityFee
+						tmpFee.BuyMakerFee = tmpFee.BuyMakerFee + prevFee.BuyMakerFee
+					}
+					err = updateFees(tmpFee, db)
+					if err != nil {
+						panic(err)
+					}
+
+					market.Offset = offset + int64(len(tradesByMarketResp.Trades))
+					err = updateMarket(market, db)
+					if err != nil {
+						panic(err)
+					}
+				} else {
+					offset = offset + offsetPagination
+					log.Printf("Adding %d to offset. Current offset is: %d\n", offsetPagination, offset)
+				}
+
 			}
 
 		}
-
 	}
 
 	// Close DB connection
@@ -256,6 +257,11 @@ func updateAssets(dataClient api.TradingDataServiceClient, db *pg.DB) error {
 			return err
 		}
 	}
+
+	return nil
+}
+
+func getBinanceKlines(db *pg.DB) error {
 
 	return nil
 }

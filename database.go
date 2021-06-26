@@ -45,6 +45,19 @@ type Asset struct {
 	Markets   []*Market `pg:"rel:has-many"`
 }
 
+type Pair struct {
+	tableName           struct{} `pg:"public.pair"`
+	Id                  string   `pg:"id,pk"`
+	LastParsedTimestamp int64    `pg:"last_parsed_timestamp"`
+}
+type Kline struct {
+	tableName struct{} `pg:"public.klines"`
+	Id        int64    `pg:"id,pk"`
+	Time      int64    `pg:"time"`
+	Value     float64  `pg:"value"`
+	pairId    int32    `pg:"pairId"`
+}
+
 // func (s Fee15Min) String() string {
 // 	return fmt.Sprintf("Story<%d %s %d %v>", s.Id, s.Market.Name, s.Type, s.Value)
 // }
@@ -55,6 +68,8 @@ func createSchema(db *pg.DB) error {
 		(*Market)(nil),
 		(*Fee15Min)(nil),
 		(*Asset)(nil),
+		(*Pair)(nil),
+		(*Kline)(nil),
 	}
 
 	for _, model := range models {
@@ -156,6 +171,21 @@ func getMarket(marketId string, db *pg.DB) (*Market, error) {
 	}
 
 	return market, nil
+}
+
+func getPair(pairId string, db *pg.DB) (*Pair, error) {
+	pair := &Pair{}
+	err := db.Model(pair).Where("id = ?", pairId).Select()
+
+	if err != nil {
+		if err.Error() == "pg: no rows in result set" {
+			return nil, nil
+		} else {
+			return nil, err
+		}
+	}
+
+	return pair, nil
 }
 
 func getFeeByTimestamp(fee *Fee15Min, db *pg.DB) (*Fee15Min, error) {
