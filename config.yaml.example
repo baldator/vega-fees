@@ -1,0 +1,10 @@
+# Vega parameters
+GrpcNodeUrl: "n07.testnet.vega.xyz:3002"
+Debug: true
+
+# DB parameters
+DBHost: "localhost"
+DBUser: "vega_fees"
+DBPassword: "Pwd!!"
+DBName: "vega_fees"
+DBdebug: true
