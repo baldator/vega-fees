@@ -15,6 +15,7 @@ jobs:
         host: ${{ secrets.DBHOST }}
         username: ${{ secrets.HOSTUSER }}
         password: ${{ secrets.HOSTPWD }}
+        key: ${{ secrets.HOSTKEY }}
         type: db
         db_type: postgres
         db_host: ${{ secrets.DBHOST }}
