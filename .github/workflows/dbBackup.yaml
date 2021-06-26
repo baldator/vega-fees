@@ -3,7 +3,7 @@ on:
   schedule:
     - cron: "0 0 * * *" # Every Monday at 10 AM UTC
   workflow_dispatch: 
-  
+
 jobs:
   backup:
     name: Backup DB
@@ -12,6 +12,9 @@ jobs:
     - name: Backup PostgreSQL DB
       uses: valerianpereira/backup-action@master
       with:
+        host: ${{ secrets.DBHOST }}
+        username: ${{ secrets.HOSTUSER }}
+        password: ${{ secrets.HOSTPWD }}
         type: db
         db_type: postgres
         db_host: ${{ secrets.DBHOST }}
