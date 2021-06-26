@@ -1,0 +1,32 @@
+name: vega update
+
+# Controls when the action will run. 
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch: 
+
+concurrency: 
+  group: run-vega-fees-import
+  cancel-in-progress: false
+
+jobs:
+  run-vega-import:
+    name: vega-import
+    runs-on: ubuntu-latest
+    steps:
+    - name: Install Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.16.x
+    - name: Checkout code
+      uses: actions/checkout@v2
+    - name: Run
+      run: go run .
+      env:
+        DBHOST: ${{ secrets.DBHOST }}
+        DBUSER: ${{ secrets.DBUSER }}
+        DBPASSWORD: ${{ secrets.DBPASSWORD }}
+        DBName: ${{ secrets.DBName }}
