@@ -6,7 +6,10 @@ In order to your it locally you would need:
 - A Grafana instance (cloud or selfhosted);
 - A PostgreSQL instance to store data;
 ## How to run it
-Customize the configuration file according to your env
+Customize the configuration file according to your environment. 
+### Configuration file
+
+### Command line parameters
 
 ## Grafana configuration
 On Grafana, you would need to perform the following steps:
