@@ -1,0 +1,25 @@
+name: backup DB
+on:
+  schedule:
+    - cron: "0 0 * * *" # Every Monday at 10 AM UTC
+  workflow_dispatch: 
+  
+jobs:
+  backup:
+    name: Backup DB
+    runs-on: ubuntu-latest
+    steps:
+    - name: Backup PostgreSQL DB
+      uses: valerianpereira/backup-action@master
+      with:
+        type: db
+        db_type: postgres
+        db_host: ${{ secrets.DBHOST }}
+        db_user: ${{ secrets.DBUSER }}
+        db_pass: ${{ secrets.DBPASSWORD }}
+        db_port: 5432
+        db_name: ${{ secrets.DBName }}
+
+
+
+      
