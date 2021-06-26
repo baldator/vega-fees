@@ -24,4 +24,5 @@ On Grafana, you would need to perform the following steps:
 A daily backup is triggered by a GitHub action (dbBackup.yaml) on a daily basis. The DB backup is stored on GitHub as artifact.
 
 ## Hack.Money 2021
+ ![hackmoney logo](https://github.com/baldator/vega-fees/blob/master/doc/hackMoney.png?raw=true)
 The project has been submitted to Hack.Money 2021 hackathon. 
