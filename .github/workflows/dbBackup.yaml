@@ -23,6 +23,10 @@ jobs:
         db_pass: ${{ secrets.DBPASSWORD }}
         db_port: 5432
         db_name: ${{ secrets.DBName }}
+
+    - name : Show backups file
+      run : ls -la /github/workspace/backups/
+
     - name: Push Backups to Artifacts
       uses: actions/upload-artifact@v2
       with:
