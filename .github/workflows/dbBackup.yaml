@@ -25,13 +25,13 @@ jobs:
         db_name: ${{ secrets.DBName }}
 
     - name : Show backups file
-      run : ls -la /github/workspace/backups/
+      run : ls -la ./backups/
 
     - name: Push Backups to Artifacts
       uses: actions/upload-artifact@v2
       with:
         name: postgres-backups
-        path: /github/workspace/backups/
+        path: ./backups/
 
 
       
