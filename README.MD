@@ -15,7 +15,7 @@ On Grafana, you would need to perform the following steps:
 - Create a PostgreSQL datasource pointing to your PostgreSQL instance
 - Import dashboards using sources in the grafana folder of this repository 
 ## Architecture
- 
+ ![Infra schema](https://github.com/baldator/vega-fees/blob/master/doc/Vega-fees.png?raw=true)
 
 ## Database backup 
 A daily backup is triggered by a GitHub action (dbBackup.yaml) on a daily basis. The DB backup is stored on GitHub as artifact.

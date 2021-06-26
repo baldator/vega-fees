@@ -8,3 +8,10 @@ DBUser: "vega_fees"
 DBPassword: "Pwd!!"
 DBName: "vega_fees"
 DBdebug: true
+
+# Klines parameters
+Pairs: 
+  - BTCUSDT
+  - EURUSDT
+  - DAIUSDT
+  - USDCUSDT
