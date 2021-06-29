@@ -13,6 +13,7 @@ import (
 )
 
 const offsetPagination = 100
+const binanceImportFrom = 1622498400
 
 func main() {
 	// Read application config
@@ -63,7 +64,9 @@ func main() {
 	}
 
 	if *klinesUpdate {
-		err = getBinanceKlines(db)
+
+		log.Printf("Klines update: %v\n", klinesUpdate)
+		err = getBinanceKlines(conf.Pairs, db)
 		if err != nil {
 			panic(err)
 		}
@@ -261,7 +264,37 @@ func updateAssets(dataClient api.TradingDataServiceClient, db *pg.DB) error {
 	return nil
 }
 
-func getBinanceKlines(db *pg.DB) error {
+func getBinanceKlines(pairs []string, db *pg.DB) error {
+	for _, pair := range pairs {
+		log.Printf("Get klines for pair %s\n", pair)
+		tmpPair, err := getPair(pair, db)
+		if err != nil {
+			return err
+		}
+
+		// Create pair in DB if it doesn't exist
+		if tmpPair == nil {
+			tmpPair = &Pair{
+				Id:                  pair,
+				LastParsedTimestamp: binanceImportFrom,
+			}
+
+			err = updatePair(tmpPair, db)
+			if err != nil {
+				return err
+			}
+
+			tmpPair, err = getPair(pair, db)
+			if err != nil {
+				return err
+			}
+		}
+
+		err = scrapeKlines(tmpPair, db)
+		if err != nil {
+			return err
+		}
+	}
 
 	return nil
 }

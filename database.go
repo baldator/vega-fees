@@ -55,7 +55,7 @@ type Kline struct {
 	Id        int64    `pg:"id,pk"`
 	Time      int64    `pg:"time"`
 	Value     float64  `pg:"value"`
-	pairId    int32    `pg:"pairId"`
+	PairId    string   `pg:"pair_id"`
 }
 
 // func (s Fee15Min) String() string {
@@ -151,6 +151,20 @@ func updateFees(fee *Fee15Min, db *pg.DB) error {
 	return err
 }
 
+func updatePair(pair *Pair, db *pg.DB) error {
+	_, err := db.Model(pair).
+		OnConflict("(id) DO UPDATE").
+		Insert()
+	return err
+}
+
+func updateKline(kline *Kline, db *pg.DB) error {
+	_, err := db.Model(kline).
+		OnConflict("(id) DO UPDATE").
+		Insert()
+	return err
+}
+
 func updateAsset(asset *Asset, db *pg.DB) error {
 	_, err := db.Model(asset).
 		OnConflict("(id) DO UPDATE").
@@ -201,4 +215,19 @@ func getFeeByTimestamp(fee *Fee15Min, db *pg.DB) (*Fee15Min, error) {
 	}
 
 	return feeTmp, nil
+}
+
+func getKline(kline *Kline, db *pg.DB) (*Kline, error) {
+	klineTmp := &Kline{}
+	err := db.Model(klineTmp).Where("pairId = ? AND time = ?", kline.PairId, kline.Time).Select()
+
+	if err != nil {
+		if err.Error() == "pg: no rows in result set" {
+			return klineTmp, nil
+		} else {
+			return &Kline{}, err
+		}
+	}
+
+	return klineTmp, nil
 }
