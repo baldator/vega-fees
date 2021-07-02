@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/go-pg/pg/v10"
+	"github.com/vegaprotocol/api/grpc/clients/go/generated/code.vegaprotocol.io/vega/proto"
 	"github.com/vegaprotocol/api/grpc/clients/go/generated/code.vegaprotocol.io/vega/proto/api"
 	"google.golang.org/grpc"
 )
@@ -26,6 +27,7 @@ func main() {
 	createDB := flag.Bool("createDB", false, "Create the DB structure based on the ORM structure.")
 	feesUpdate := flag.Bool("feesUpdate", false, "Import fees from Vega gRPC API.")
 	klinesUpdate := flag.Bool("klinesUpdate", false, "Import crypto market historical data from Binance")
+	candleUpdate := flag.Bool("candleUpdate", false, "Import market historical data from Vega")
 	flag.Parse()
 
 	// Initialize DB
@@ -63,12 +65,32 @@ func main() {
 		panic(err)
 	}
 
+	for _, element := range markets.Markets {
+		// Check if market already exist
+		if !marketExists(element.Id, db) {
+			err = createMarket(element.Id, element.TradableInstrument.Instrument.Name, element.DecimalPlaces, element.TradableInstrument.Instrument.GetFuture().SettlementAsset, element.Fees.Factors.InfrastructureFee, element.Fees.Factors.LiquidityFee, element.Fees.Factors.MakerFee, db)
+			if err != nil {
+				panic(err)
+			}
+
+		}
+	}
+
 	if *klinesUpdate {
 
 		log.Printf("Klines update: %v\n", klinesUpdate)
 		err = getBinanceKlines(conf.Pairs, db)
 		if err != nil {
 			panic(err)
+		}
+	}
+
+	if *candleUpdate {
+		for _, element := range markets.Markets {
+			err = candleUpdateForMarket(element.Id, dataClient, db)
+			if err != nil {
+				panic(err)
+			}
 		}
 	}
 
@@ -80,15 +102,6 @@ func main() {
 
 			//fmt.Printf("Market[%d]: %+v \n\n", index, element)
 			log.Printf("Importing fees for market: %+s \n\n", element.TradableInstrument.Instrument.Name)
-
-			// Check if market already exist
-			if !marketExists(element.Id, db) {
-				err = createMarket(element.Id, element.TradableInstrument.Instrument.Name, element.DecimalPlaces, element.TradableInstrument.Instrument.GetFuture().SettlementAsset, db)
-				if err != nil {
-					panic(err)
-				}
-
-			}
 
 			market, err := getMarket(element.Id, db)
 			if err != nil {
@@ -291,6 +304,34 @@ func getBinanceKlines(pairs []string, db *pg.DB) error {
 		}
 
 		err = scrapeKlines(tmpPair, db)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func candleUpdateForMarket(market string, dataClient api.TradingDataServiceClient, db *pg.DB) error {
+	lastTimestamp, err := getLastCandleTimestamp(market, db)
+	if err != nil {
+		return err
+	}
+	log.Println("Getting candles from Vega")
+	request := api.CandlesRequest{MarketId: market, Interval: proto.Interval_INTERVAL_I15M, SinceTimestamp: lastTimestamp}
+	candles, err := dataClient.Candles(context.Background(), &request)
+	if err != nil {
+		return err
+	}
+
+	log.Println("Parsing candles")
+	for _, candle := range candles.Candles {
+		err = updateCandle(&Candle{
+			Time:         candle.Timestamp,
+			Open:         int64(candle.Open),
+			Volume:       int64(candle.Volume),
+			VegaMarketID: market,
+		}, db)
 		if err != nil {
 			return err
 		}

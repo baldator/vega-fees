@@ -24,7 +24,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v2
     - name: Run
-      run: go run . -createDB -feesUpdate -klinesUpdate
+      run: go run . -createDB -feesUpdate -klinesUpdate -candleUpdate
       env:
         DBHOST: ${{ secrets.DBHOST }}
         DBUSER: ${{ secrets.DBUSER }}

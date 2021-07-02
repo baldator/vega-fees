@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"strconv"
 
 	"github.com/go-pg/pg/extra/pgdebug"
 	"github.com/go-pg/pg/v10"
@@ -20,6 +21,9 @@ type Market struct {
 	Offset             int64       `pg:"offset,default:0"`
 	SettlementCurrency *Asset      `pg:"rel:has-one"`
 	CurrencyId         string      `pg:"currency_id"`
+	InfrastructureFee  float64     `pg:"infrastructure_fee"`
+	LiquidityFee       float64     `pg:"liquidity_fee"`
+	MakerFee           float64     `pg:"maker_fee"`
 }
 
 type Fee15Min struct {
@@ -49,6 +53,16 @@ type Pair struct {
 	tableName           struct{} `pg:"public.pair"`
 	Id                  string   `pg:"id,pk"`
 	LastParsedTimestamp int64    `pg:"last_parsed_timestamp"`
+	CurrencyID          string   `pg:"currency_id"`
+}
+
+type Candle struct {
+	tableName    struct{} `pg:"public.vegacandle"`
+	Id           int64    `pg:"id,pk"`
+	Time         int64    `pg:"time"`
+	Open         int64    `pg:"open"`
+	Volume       int64    `pg:"volume"`
+	VegaMarketID string   `pg:"vega_market_id"`
 }
 type Kline struct {
 	tableName struct{} `pg:"public.klines"`
@@ -70,6 +84,7 @@ func createSchema(db *pg.DB) error {
 		(*Asset)(nil),
 		(*Pair)(nil),
 		(*Kline)(nil),
+		(*Candle)(nil),
 	}
 
 	for _, model := range models {
@@ -125,12 +140,18 @@ func marketExists(marketId string, db *pg.DB) bool {
 }
 
 // createMarket insert a new market in DB
-func createMarket(marketId string, name string, decimals uint64, asset string, db *pg.DB) error {
+func createMarket(marketId string, name string, decimals uint64, asset string, infra string, liquidity string, maker string, db *pg.DB) error {
+	liqNum, _ := strconv.ParseFloat(liquidity, 32)
+	makerNum, _ := strconv.ParseFloat(maker, 32)
+	infraNum, _ := strconv.ParseFloat(infra, 32)
 	market := &Market{
-		Name:       name,
-		VegaId:     marketId,
-		Decimals:   int32(decimals),
-		CurrencyId: asset,
+		Name:              name,
+		VegaId:            marketId,
+		Decimals:          int32(decimals),
+		CurrencyId:        asset,
+		LiquidityFee:      liqNum,
+		MakerFee:          makerNum,
+		InfrastructureFee: infraNum,
 	}
 	_, err := db.Model(market).Insert()
 
@@ -160,6 +181,13 @@ func updatePair(pair *Pair, db *pg.DB) error {
 
 func updateKline(kline *Kline, db *pg.DB) error {
 	_, err := db.Model(kline).
+		OnConflict("(id) DO UPDATE").
+		Insert()
+	return err
+}
+
+func updateCandle(candle *Candle, db *pg.DB) error {
+	_, err := db.Model(candle).
 		OnConflict("(id) DO UPDATE").
 		Insert()
 	return err
@@ -230,4 +258,35 @@ func getKline(kline *Kline, db *pg.DB) (*Kline, error) {
 	}
 
 	return klineTmp, nil
+}
+
+func getCandle(candle *Candle, db *pg.DB) (*Candle, error) {
+	candleTmp := &Candle{}
+	err := db.Model(candleTmp).Where("vega_market_id = ? AND time = ?", candle.VegaMarketID, candle.Time).Select()
+
+	if err != nil {
+		if err.Error() == "pg: no rows in result set" {
+			return candleTmp, nil
+		} else {
+			return &Candle{}, err
+		}
+	}
+
+	return candleTmp, nil
+}
+
+func getLastCandleTimestamp(market string, db *pg.DB) (int64, error) {
+	candleTmp := &Candle{}
+	err := db.Model(candleTmp).Order("time DESC").Limit(1).Where("vega_market_id = ?", market).Select()
+
+	if err != nil {
+		if err.Error() == "pg: no rows in result set" {
+			log.Println("No candle for market, return default timestamp")
+			return 16250904000000, nil
+		} else {
+			return 0, err
+		}
+	}
+
+	return candleTmp.Time, nil
 }
