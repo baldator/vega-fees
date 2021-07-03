@@ -277,7 +277,7 @@ func getCandle(candle *Candle, db *pg.DB) (*Candle, error) {
 
 func getLastCandleTimestamp(market string, db *pg.DB) (int64, error) {
 	candleTmp := &Candle{}
-	err := db.Model(candleTmp).Order("time DESC").Limit(1).Where("vega_market_id = ?", market).Select()
+	err := db.Model(candleTmp).Limit(1).OrderExpr("time DESC").Where("vega_market_id = ?", market).Select()
 
 	if err != nil {
 		if err.Error() == "pg: no rows in result set" {

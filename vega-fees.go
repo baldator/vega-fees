@@ -67,6 +67,7 @@ func main() {
 
 	for _, element := range markets.Markets {
 		// Check if market already exist
+		log.Printf("Update Market: %s, %s...\n", element.Id, element.TradableInstrument.Instrument.Name)
 		if !marketExists(element.Id, db) {
 			err = createMarket(element.Id, element.TradableInstrument.Instrument.Name, element.DecimalPlaces, element.TradableInstrument.Instrument.GetFuture().SettlementAsset, element.Fees.Factors.InfrastructureFee, element.Fees.Factors.LiquidityFee, element.Fees.Factors.MakerFee, db)
 			if err != nil {
@@ -102,6 +103,15 @@ func main() {
 
 			//fmt.Printf("Market[%d]: %+v \n\n", index, element)
 			log.Printf("Importing fees for market: %+s \n\n", element.TradableInstrument.Instrument.Name)
+
+			// Check if market already exist
+			if !marketExists(element.Id, db) {
+				err = createMarket(element.Id, element.TradableInstrument.Instrument.Name, element.DecimalPlaces, element.TradableInstrument.Instrument.GetFuture().SettlementAsset, element.Fees.Factors.InfrastructureFee, element.Fees.Factors.LiquidityFee, element.Fees.Factors.MakerFee, db)
+				if err != nil {
+					panic(err)
+				}
+
+			}
 
 			market, err := getMarket(element.Id, db)
 			if err != nil {
