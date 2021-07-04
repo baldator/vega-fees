@@ -1,5 +1,5 @@
 # Vega parameters
-GrpcNodeUrl: "n06.testnet.vega.xyz:3002"
+GrpcNodeUrl: "n07.testnet.vega.xyz:3002"
 Debug: false
 
 # DB parameters
