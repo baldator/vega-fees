@@ -243,7 +243,9 @@ func main() {
 				if len(tradesByMarketResp.Trades) < offsetPagination {
 					exitLoop = true
 					// save data before exit
-					log.Printf("Less than %d trades: exiting, last timestamp: %d. Save data to DB\n", len(tradesByMarketResp.Trades), tradesByMarketResp.Trades[len(tradesByMarketResp.Trades)-1].Timestamp)
+					if len(tradesByMarketResp.Trades) > 0 {
+						log.Printf("Less than %d trades: exiting, last timestamp: %d. Save data to DB\n", len(tradesByMarketResp.Trades), tradesByMarketResp.Trades[len(tradesByMarketResp.Trades)-1].Timestamp)
+					}
 					prevFee, err := getFeeByTimestamp(tmpFee, db)
 					if err != nil {
 						panic(err)

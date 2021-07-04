@@ -114,7 +114,7 @@ func newDBConn(conf ConfigVars) (con *pg.DB) {
 		log.Println("cannot connect to postgres")
 	}
 
-	if conf.DBDebug {
+	if conf.DBDebug != false {
 		con.AddQueryHook(pgdebug.DebugHook{
 			// Print all queries.
 			Verbose: true,
