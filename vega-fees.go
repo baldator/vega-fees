@@ -28,7 +28,6 @@ func main() {
 	feesUpdate := flag.Bool("feesUpdate", false, "Import fees from Vega gRPC API.")
 	klinesUpdate := flag.Bool("klinesUpdate", false, "Import crypto market historical data from Binance")
 	candleUpdate := flag.Bool("candleUpdate", false, "Import market historical data from Vega")
-	testFlag := flag.Bool("testFlag", false, "Import market historical data from Vega")
 	flag.Parse()
 
 	// Initialize DB
@@ -92,30 +91,6 @@ func main() {
 			err = candleUpdateForMarket(element.Id, dataClient, db)
 			if err != nil {
 				panic(err)
-			}
-		}
-	}
-
-	if *testFlag {
-		for _, element := range markets.Markets {
-			if element.TradableInstrument.Instrument.Name == "Tesla Quarterly (31 Dec 2021)" {
-				market, err := getMarket(element.Id, db)
-				if err != nil {
-					panic(err)
-				}
-				marketID := market.VegaId
-				offset := market.Offset
-				pagination := api.Pagination{
-					Descending: false,
-					Skip:       uint64(offset),
-					Limit:      offsetPagination,
-				}
-				tradesByMarketReq := api.TradesByMarketRequest{MarketId: marketID, Pagination: &pagination}
-				tradesByMarketResp, err := dataClient.TradesByMarket(context.Background(), &tradesByMarketReq)
-
-				for _, trade := range tradesByMarketResp.Trades {
-					log.Printf("-- %+v\n", trade)
-				}
 			}
 		}
 	}
@@ -188,6 +163,7 @@ func main() {
 
 							prevFee, err := getFeeByTimestamp(tmpFee, db)
 							if err != nil {
+								log.Printf("%+v\n", err)
 								panic(err)
 							}
 							if prevFee != nil {
@@ -202,12 +178,14 @@ func main() {
 
 							err = updateFees(tmpFee, db)
 							if err != nil {
+								log.Printf("%+v\n", err)
 								panic(err)
 							}
 
 							market.Offset = offset + int64(index)
 							err = updateMarket(market, db)
 							if err != nil {
+								log.Printf("%+v\n", err)
 								panic(err)
 							}
 
