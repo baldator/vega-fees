@@ -174,7 +174,8 @@ func main() {
 				tradesByMarketResp, err := dataClient.TradesByMarket(context.Background(), &tradesByMarketReq)
 
 				if err != nil {
-					break
+					log.Printf("%+v\n", err)
+					continue
 				}
 
 				for index, trade := range tradesByMarketResp.Trades {
