@@ -14,9 +14,160 @@
     "gnetId": null,
     "graphTooltip": 0,
     "id": 1,
-    "iteration": 1624641183719,
+    "iteration": 1625348378423,
     "links": [],
     "panels": [{
+            "datasource": null,
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "thresholds"
+                    },
+                    "custom": {
+                        "align": "auto",
+                        "displayMode": "auto"
+                    },
+                    "mappings": [],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [{
+                                "color": "green",
+                                "value": null
+                            },
+                            {
+                                "color": "red",
+                                "value": 80
+                            }
+                        ]
+                    }
+                },
+                "overrides": []
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 0
+            },
+            "id": 38,
+            "options": {
+                "showHeader": true
+            },
+            "pluginVersion": "8.0.3",
+            "targets": [{
+                "format": "table",
+                "group": [],
+                "metricColumn": "none",
+                "rawQuery": true,
+                "rawSql": "  SELECT \r\n    m.name  as \"Market name\",\r\n    (SUM(sell_maker_fee) + SUM(buy_maker_fee)) / (POWER(10,AVG(m.\"decimals\")) * POWER(10, AVG(a.decimals))) as \"Maker fees\",\r\n    (SUM(sell_infrastructure_fee) + SUM(buy_infrastructure_fee)) / (POWER(10,AVG(m.\"decimals\")) * POWER(10, AVG(a.decimals))) as \"Infrastructure fees\",\r\n    (SUM(sell_liquidity_fee) + SUM(buy_liquidity_fee)) / (POWER(10,AVG(m.\"decimals\")) * POWER(10, AVG(a.decimals))) as \"Liquidity fees\"\r\n        \r\n  FROM \"public\".\"fees15min\" as \"f\"\r\n  join public.markets as \"m\" on m.vega_id = f.vega_market_id\r\n  join public.pair as \"p\" on m.currency_id = p.currency_id\r\n  join asset a on a.id = m.currency_id \r\n  join klines k on k.pair_id = p.id and f.\"time\" = k.\"time\" \r\n  where m.name IN ($Market) AND \"f\".\"time\" IS NOT null\r\n  AND $__unixEpochFilter(\"f\".\"time\")\r\n  group by m.name\r\n  ORDER BY (SUM(sell_maker_fee) + SUM(buy_maker_fee)) DESC",
+                "refId": "A",
+                "select": [
+                    [{
+                        "params": [
+                            "value"
+                        ],
+                        "type": "column"
+                    }]
+                ],
+                "timeColumn": "time",
+                "where": [{
+                    "name": "$__timeFilter",
+                    "params": [],
+                    "type": "macro"
+                }]
+            }],
+            "title": "Top markets",
+            "type": "table"
+        },
+        {
+            "datasource": null,
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "palette-classic"
+                    },
+                    "custom": {
+                        "hideFrom": {
+                            "legend": false,
+                            "tooltip": false,
+                            "viz": false
+                        }
+                    },
+                    "mappings": []
+                },
+                "overrides": []
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 0
+            },
+            "id": 45,
+            "options": {
+                "displayLabels": [
+                    "name",
+                    "percent"
+                ],
+                "legend": {
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "values": []
+                },
+                "pieType": "pie",
+                "reduceOptions": {
+                    "calcs": [
+                        "sum"
+                    ],
+                    "fields": "",
+                    "values": false
+                },
+                "tooltip": {
+                    "mode": "single"
+                }
+            },
+            "pluginVersion": "8.0.3",
+            "targets": [{
+                "format": "time_series",
+                "group": [],
+                "metricColumn": "none",
+                "rawQuery": true,
+                "rawSql": "  SELECT \r\n    m.name  as Name,\r\n    SUM(sell_maker_fee) as \"fees\",\r\n    now() as time\r\n  FROM \"public\".\"fees15min\" as \"f\"\r\n  join public.markets as \"m\" on m.vega_id = f.vega_market_id\r\n  join public.pair as \"p\" on m.currency_id = p.currency_id\r\n  join asset a on a.id = m.currency_id \r\n  join klines k on k.pair_id = p.id and f.\"time\" = k.\"time\" \r\n  where m.name IN ($Market) AND \"f\".\"time\" IS NOT null\r\n  AND $__unixEpochFilter(\"f\".\"time\")\r\n  group by m.name\r\n  ORDER BY (SUM(sell_maker_fee) + SUM(buy_maker_fee)) DESC",
+                "refId": "A",
+                "select": [
+                    [{
+                        "params": [
+                            "value"
+                        ],
+                        "type": "column"
+                    }]
+                ],
+                "timeColumn": "time",
+                "where": [{
+                    "name": "$__timeFilter",
+                    "params": [],
+                    "type": "macro"
+                }]
+            }],
+            "title": "Fees distribution by market",
+            "type": "piechart"
+        },
+        {
+            "collapsed": false,
+            "datasource": null,
+            "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 8
+            },
+            "id": 10,
+            "panels": [],
+            "repeat": "feesType",
+            "title": "$feesType fees",
+            "type": "row"
+        },
+        {
             "datasource": "PostgreSQL",
             "description": "",
             "fieldConfig": {
@@ -69,10 +220,10 @@
                 "overrides": []
             },
             "gridPos": {
-                "h": 10,
+                "h": 9,
                 "w": 12,
                 "x": 0,
-                "y": 0
+                "y": 9
             },
             "id": 7,
             "interval": "15m",
@@ -95,7 +246,7 @@
                 "metricColumn": "none",
                 "queryType": "randomWalk",
                 "rawQuery": true,
-                "rawSql": "SELECT \n    to_timestamp(\"f\".\"time\") AS time,\n    m.name  as tags,\n    SUM(sell_maker_fee) AS \"Sell fees\",\n    SUM(buy_maker_fee) AS \"Buy fees\"\n  FROM \"public\".\"fees15min\" as \"f\"\n  join public.markets as \"m\" on m.vega_id = f.vega_market_id\n  where m.name IN ($Market) AND \"f\".\"time\" IS NOT NULL\n  GROUP BY m.name, time\n  ORDER BY time\n  ",
+                "rawSql": "SELECT \n    to_timestamp(\"f\".\"time\") AS time,\n    m.name  as tags,\n    CASE\n        WHEN 'Maker' IN ($feesType) THEN (sell_maker_fee * k.value) / (POWER(10,m.\"decimals\") * POWER(10, a.decimals))\n        WHEN 'Infrastructure' IN ($feesType) THEN (sell_infrastructure_fee * k.value) / (POWER(10,m.\"decimals\") * POWER(10, a.decimals))\n        WHEN 'Liquidity' IN ($feesType) THEN (sell_liquidity_fee * k.value) / (POWER(10,m.\"decimals\") * POWER(10, a.decimals))\n        ELSE 0\n    END AS \"Sell fees\",\n    CASE\n        WHEN 'Maker' IN ($feesType) THEN (buy_maker_fee * k.value) / (POWER(10,m.\"decimals\") * POWER(10, a.decimals))\n        WHEN 'Infrastructure' IN ($feesType) THEN (buy_infrastructure_fee * k.value) / (POWER(10,m.\"decimals\") * POWER(10, a.decimals))\n        WHEN 'Liquidity' IN ($feesType) THEN (buy_liquidity_fee * k.value) / (POWER(10,m.\"decimals\") * POWER(10, a.decimals))\n        ELSE 0\n    END AS \"Buy fees\"\n  FROM \"public\".\"fees15min\" as \"f\"\n  join public.markets as \"m\" on m.vega_id = f.vega_market_id\n  join public.pair as \"p\" on m.currency_id = p.currency_id\n  join asset a on a.id = m.currency_id \n  join klines k on k.pair_id = p.id and f.\"time\" = k.\"time\" \n  where m.name IN ($Market) AND \"f\".\"time\" IS NOT NULL\n  ORDER BY f.time\n  ",
                 "refId": "A",
                 "select": [
                     [{
@@ -117,90 +268,57 @@
                     "type": "expression"
                 }]
             }],
-            "title": "Maker fees",
+            "title": "$feesType fees (in USD)",
             "transformations": [],
             "type": "timeseries"
         },
         {
-            "datasource": "PostgreSQL",
-            "description": "",
+            "datasource": null,
             "fieldConfig": {
                 "defaults": {
                     "color": {
-                        "mode": "palette-classic"
-                    },
-                    "custom": {
-                        "axisLabel": "",
-                        "axisPlacement": "auto",
-                        "barAlignment": 0,
-                        "drawStyle": "line",
-                        "fillOpacity": 0,
-                        "gradientMode": "none",
-                        "hideFrom": {
-                            "legend": false,
-                            "tooltip": false,
-                            "viz": false
-                        },
-                        "lineInterpolation": "linear",
-                        "lineWidth": 1,
-                        "pointSize": 5,
-                        "scaleDistribution": {
-                            "type": "linear"
-                        },
-                        "showPoints": "auto",
-                        "spanNulls": false,
-                        "stacking": {
-                            "group": "A",
-                            "mode": "none"
-                        },
-                        "thresholdsStyle": {
-                            "mode": "off"
-                        }
+                        "mode": "thresholds"
                     },
                     "mappings": [],
                     "thresholds": {
                         "mode": "absolute",
                         "steps": [{
-                                "color": "green",
-                                "value": null
-                            },
-                            {
-                                "color": "red",
-                                "value": 80
-                            }
-                        ]
+                            "color": "green",
+                            "value": null
+                        }]
                     }
                 },
                 "overrides": []
             },
             "gridPos": {
-                "h": 10,
+                "h": 9,
                 "w": 12,
                 "x": 12,
-                "y": 0
+                "y": 9
             },
-            "id": 6,
-            "interval": "15m",
-            "maxDataPoints": 15,
+            "id": 30,
             "options": {
-                "legend": {
-                    "calcs": [],
-                    "displayMode": "list",
-                    "placement": "bottom"
+                "colorMode": "value",
+                "graphMode": "area",
+                "justifyMode": "auto",
+                "orientation": "auto",
+                "reduceOptions": {
+                    "calcs": [
+                        "sum"
+                    ],
+                    "fields": "",
+                    "values": false
                 },
-                "tooltip": {
-                    "mode": "multi"
-                }
+                "text": {},
+                "textMode": "auto"
             },
             "pluginVersion": "8.0.3",
             "targets": [{
                 "format": "time_series",
                 "group": [],
-                "hide": false,
                 "metricColumn": "none",
-                "queryType": "randomWalk",
                 "rawQuery": true,
-                "rawSql": "SELECT \n    to_timestamp(\"f\".\"time\") AS time,\n    m.name  as tags,\n    SUM(sell_infrastructure_fee) AS \"Sell fees\",\n    SUM(buy_infrastructure_fee) AS \"Buy fees\"\n  FROM \"public\".\"fees15min\" as \"f\"\n  join public.markets as \"m\" on m.vega_id = f.vega_market_id\n  where m.name IN ($Market) AND \"f\".\"time\" IS NOT NULL\n  GROUP BY m.name, time\n  ORDER BY time\n  ",
+                "rawSql": "SELECT \r\n    to_timestamp(\"f\".\"time\") AS time,\r\n    m.name  as tags,\r\n    CASE\r\n        WHEN 'Maker' IN ($feesType) THEN (sell_maker_fee * k.value) / (POWER(10,m.\"decimals\") * POWER(10, a.decimals))\r\n        WHEN 'Infrastructure' IN ($feesType) THEN (sell_infrastructure_fee * k.value) / (POWER(10,m.\"decimals\") * POWER(10, a.decimals))\r\n        WHEN 'Liquidity' IN ($feesType) THEN (sell_liquidity_fee * k.value) / (POWER(10,m.\"decimals\") * POWER(10, a.decimals))\r\n        ELSE 0\r\n    END AS \"Sell fees\",\r\n    CASE\r\n        WHEN 'Maker' IN ($feesType) THEN (buy_maker_fee * k.value) / (POWER(10,m.\"decimals\") * POWER(10, a.decimals))\r\n        WHEN 'Infrastructure' IN ($feesType) THEN (buy_infrastructure_fee * k.value) / (POWER(10,m.\"decimals\") * POWER(10, a.decimals))\r\n        WHEN 'Liquidity' IN ($feesType) THEN (buy_liquidity_fee * k.value) / (POWER(10,m.\"decimals\") * POWER(10, a.decimals))\r\n        ELSE 0\r\n    END AS \"Buy fees\"\r\n  FROM \"public\".\"fees15min\" as \"f\"\r\n  join public.markets as \"m\" on m.vega_id = f.vega_market_id\r\n  join public.pair as \"p\" on m.currency_id = p.currency_id\r\n  join asset a on a.id = m.currency_id \r\n  join klines k on k.pair_id = p.id and f.\"time\" = k.\"time\" \r\n  where m.name IN ($Market) AND \"f\".\"time\" IS NOT NULL\r\n  AND $__unixEpochFilter(\"f\".\"time\")\r\n  ORDER BY f.time",
                 "refId": "A",
                 "select": [
                     [{
@@ -210,21 +328,99 @@
                         "type": "column"
                     }]
                 ],
-                "table": "fees15min",
                 "timeColumn": "time",
                 "where": [{
-                    "name": "",
-                    "params": [
-                        "value",
-                        "=",
-                        "value"
-                    ],
-                    "type": "expression"
+                    "name": "$__timeFilter",
+                    "params": [],
+                    "type": "macro"
                 }]
             }],
-            "title": "Infrastructure fees",
-            "transformations": [],
-            "type": "timeseries"
+            "title": "Total $feesType fee in selected period (USD)",
+            "type": "stat"
+        },
+        {
+            "datasource": null,
+            "description": "",
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "thresholds"
+                    },
+                    "mappings": [],
+                    "max": 100,
+                    "min": 0,
+                    "thresholds": {
+                        "mode": "percentage",
+                        "steps": [{
+                            "color": "green",
+                            "value": null
+                        }]
+                    },
+                    "unit": "percent"
+                },
+                "overrides": []
+            },
+            "gridPos": {
+                "h": 9,
+                "w": 24,
+                "x": 0,
+                "y": 18
+            },
+            "id": 53,
+            "options": {
+                "orientation": "auto",
+                "reduceOptions": {
+                    "calcs": [
+                        "mean"
+                    ],
+                    "fields": "/^Sell %$/",
+                    "limit": 10,
+                    "values": true
+                },
+                "showThresholdLabels": false,
+                "showThresholdMarkers": true,
+                "text": {}
+            },
+            "pluginVersion": "8.0.3",
+            "repeat": null,
+            "targets": [{
+                "format": "table",
+                "group": [],
+                "metricColumn": "none",
+                "rawQuery": true,
+                "rawSql": "    SELECT \r\n    m.name  as tags,\r\n    CASE\r\n        WHEN 'Maker' IN ($feesType) THEN (SUM(sell_maker_fee)) / (SUM(sell_maker_fee) + SUM(buy_maker_fee)) * 100\r\n        WHEN 'Infrastructure' IN ($feesType) THEN (SUM(sell_infrastructure_fee)) / (SUM(sell_infrastructure_fee) + SUM(buy_infrastructure_fee)) * 100\r\n        WHEN 'Liquidity' IN ($feesType) THEN (SUM(sell_liquidity_fee)) / (SUM(sell_liquidity_fee) + SUM(buy_liquidity_fee)) * 100\r\n        ELSE 0\r\n    END AS \"Sell %\"\r\n  FROM \"public\".\"fees15min\" as \"f\"\r\n  join public.markets as \"m\" on m.vega_id = f.vega_market_id\r\n  join public.pair as \"p\" on m.currency_id = p.currency_id\r\n  join asset a on a.id = m.currency_id \r\n  join klines k on k.pair_id = p.id and f.\"time\" = k.\"time\" \r\n  where m.name IN ($Market)\r\n  AND $__unixEpochFilter(\"f\".\"time\")\r\n  group by m.name",
+                "refId": "A",
+                "select": [
+                    [{
+                        "params": [
+                            "value"
+                        ],
+                        "type": "column"
+                    }]
+                ],
+                "timeColumn": "time",
+                "where": [{
+                    "name": "$__timeFilter",
+                    "params": [],
+                    "type": "macro"
+                }]
+            }],
+            "title": "% of sell fees $Market",
+            "type": "gauge"
+        },
+        {
+            "collapsed": false,
+            "datasource": null,
+            "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 46
+            },
+            "id": 16,
+            "panels": [],
+            "title": "General",
+            "type": "row"
         },
         {
             "datasource": "GraphQL Data Source",
@@ -251,27 +447,17 @@
                         ]
                     }
                 },
-                "overrides": [{
-                    "matcher": {
-                        "id": "byName",
-                        "options": "name"
-                    },
-                    "properties": [{
-                        "id": "custom.width",
-                        "value": 243
-                    }]
-                }]
+                "overrides": []
             },
             "gridPos": {
-                "h": 9,
+                "h": 8,
                 "w": 12,
                 "x": 0,
-                "y": 10
+                "y": 47
             },
-            "id": 2,
+            "id": 22,
             "options": {
-                "showHeader": true,
-                "sortBy": []
+                "showHeader": true
             },
             "pluginVersion": "8.0.3",
             "targets": [{
@@ -280,122 +466,16 @@
                 "annotationText": "",
                 "annotationTitle": "",
                 "constant": 6.5,
-                "dataPath": "markets",
+                "dataPath": "assets",
                 "endTimePath": "endTime",
                 "groupBy": "",
-                "queryText": "query{\n  markets{\n    name\n    fees{\n      factors{\n        makerFee\n        infrastructureFee\n        liquidityFee\n      }\n    }\n  }\n}",
-                "queryType": "randomWalk",
+                "queryText": "query{\n  assets{\n    id\n    name\n  }\n}",
                 "refId": "A",
                 "timeFormat": null,
                 "timePath": ""
             }],
-            "title": "Vega - Markets fees",
+            "title": "Vega Assets",
             "type": "table"
-        },
-        {
-            "datasource": "PostgreSQL",
-            "description": "",
-            "fieldConfig": {
-                "defaults": {
-                    "color": {
-                        "mode": "palette-classic"
-                    },
-                    "custom": {
-                        "axisLabel": "",
-                        "axisPlacement": "auto",
-                        "barAlignment": 0,
-                        "drawStyle": "line",
-                        "fillOpacity": 0,
-                        "gradientMode": "none",
-                        "hideFrom": {
-                            "legend": false,
-                            "tooltip": false,
-                            "viz": false
-                        },
-                        "lineInterpolation": "linear",
-                        "lineWidth": 1,
-                        "pointSize": 5,
-                        "scaleDistribution": {
-                            "type": "linear"
-                        },
-                        "showPoints": "auto",
-                        "spanNulls": false,
-                        "stacking": {
-                            "group": "A",
-                            "mode": "none"
-                        },
-                        "thresholdsStyle": {
-                            "mode": "off"
-                        }
-                    },
-                    "mappings": [],
-                    "thresholds": {
-                        "mode": "absolute",
-                        "steps": [{
-                                "color": "green",
-                                "value": null
-                            },
-                            {
-                                "color": "red",
-                                "value": 80
-                            }
-                        ]
-                    }
-                },
-                "overrides": []
-            },
-            "gridPos": {
-                "h": 10,
-                "w": 12,
-                "x": 12,
-                "y": 10
-            },
-            "id": 8,
-            "interval": "15m",
-            "maxDataPoints": 15,
-            "options": {
-                "legend": {
-                    "calcs": [],
-                    "displayMode": "list",
-                    "placement": "bottom"
-                },
-                "tooltip": {
-                    "mode": "multi"
-                }
-            },
-            "pluginVersion": "8.0.3",
-            "targets": [{
-                "format": "time_series",
-                "group": [],
-                "hide": false,
-                "metricColumn": "none",
-                "queryType": "randomWalk",
-                "rawQuery": true,
-                "rawSql": "SELECT \n    to_timestamp(\"f\".\"time\") AS time,\n    m.name  as tags,\n    SUM(sell_liquidity_fee) AS \"Sell fees\",\n    SUM(buy_liquidity_fee) AS \"Buy fees\"\n  FROM \"public\".\"fees15min\" as \"f\"\n  join public.markets as \"m\" on m.vega_id = f.vega_market_id\n  where m.name IN ($Market) AND \"f\".\"time\" IS NOT NULL\n  GROUP BY m.name, time\n  ORDER BY time\n  ",
-                "refId": "A",
-                "select": [
-                    [{
-                        "params": [
-                            "value"
-                        ],
-                        "type": "column"
-                    }]
-                ],
-                "table": "fees15min",
-                "timeColumn": "time",
-                "where": [{
-                    "name": "",
-                    "params": [
-                        "value",
-                        "=",
-                        "value"
-                    ],
-                    "type": "expression"
-                }]
-            }],
-            "title": "Liquidity fees",
-            "transformations": [],
-            "type": "timeseries"
         },
         {
             "datasource": "GraphQL Data Source",
@@ -428,15 +508,11 @@
                 "h": 8,
                 "w": 12,
                 "x": 12,
-                "y": 20
+                "y": 47
             },
-            "id": 4,
+            "id": 24,
             "options": {
-                "showHeader": true,
-                "sortBy": [{
-                    "desc": false,
-                    "displayName": "symbol"
-                }]
+                "showHeader": true
             },
             "pluginVersion": "8.0.3",
             "targets": [{
@@ -445,16 +521,15 @@
                 "annotationText": "",
                 "annotationTitle": "",
                 "constant": 6.5,
-                "dataPath": "assets",
+                "dataPath": "markets",
                 "endTimePath": "endTime",
                 "groupBy": "",
-                "queryText": "query{\n  assets{\n    symbol\n    source{\n      __typename\n    }\n  }\n}",
-                "queryType": "randomWalk",
+                "queryText": "query{\n  markets{\n      name\n      fees{\n        factors{\n          makerFee\n          infrastructureFee\n          liquidityFee\n        }\n      }\n    }\n}",
                 "refId": "A",
                 "timeFormat": null,
                 "timePath": ""
             }],
-            "title": "Vega - Assets",
+            "title": "Vega Markets",
             "type": "table"
         }
     ],
@@ -468,12 +543,16 @@
         "list": [{
                 "allValue": null,
                 "current": {
-                    "selected": true,
+                    "selected": false,
                     "text": [
-                        "All"
+                        "AAVEDAI Monthly (31 Dec 2021)",
+                        "Tesla Quarterly (31 Dec 2021)",
+                        "UNIDAI Monthly (31 Dec 2021)"
                     ],
                     "value": [
-                        "$__all"
+                        "AAVEDAI Monthly (31 Dec 2021)",
+                        "Tesla Quarterly (31 Dec 2021)",
+                        "UNIDAI Monthly (31 Dec 2021)"
                     ]
                 },
                 "datasource": "PostgreSQL",
@@ -498,10 +577,12 @@
                 "current": {
                     "selected": true,
                     "text": [
-                        "All"
+                        "Liquidity",
+                        "Maker"
                     ],
                     "value": [
-                        "$__all"
+                        "Liquidity",
+                        "Maker"
                     ]
                 },
                 "description": null,
@@ -512,7 +593,7 @@
                 "multi": true,
                 "name": "feesType",
                 "options": [{
-                        "selected": true,
+                        "selected": false,
                         "text": "All",
                         "value": "$__all"
                     },
@@ -522,12 +603,12 @@
                         "value": "Infrastructure"
                     },
                     {
-                        "selected": false,
+                        "selected": true,
                         "text": "Maker",
                         "value": "Maker"
                     },
                     {
-                        "selected": false,
+                        "selected": true,
                         "text": "Liquidity",
                         "value": "Liquidity"
                     }
@@ -540,7 +621,7 @@
         ]
     },
     "time": {
-        "from": "now-12h",
+        "from": "now-24h",
         "to": "now-30m"
     },
     "timepicker": {
@@ -555,5 +636,5 @@
     "timezone": "",
     "title": "Vega - Markets",
     "uid": "oTqZeNgnk",
-    "version": 3
+    "version": 17
 }

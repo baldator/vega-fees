@@ -8,8 +8,32 @@ In order to your it locally you would need:
 ## How to run it
 Customize the configuration file according to your environment. 
 ### Configuration file
+Here is an example configuration file:
+```yaml
+# Vega parameters
+GrpcNodeUrl: "n07.testnet.vega.xyz:3002"
+Debug: true # if true will log all query before executing them 
 
+# DB parameters
+DBHost: "MyDBHost"
+DBUser: "MyDBUser"
+DBPassword: "MyDBPassword"
+DBName: "MyDBName"
+DBdebug: true
+
+# Klines parameters
+Pairs: 
+  - BTCUSDT
+  - EURUSDT
+  - USDTDAI
+  - USDCUSDT
+```
 ### Command line parameters
+The script is modular and functions can be selected using command line parameters. Available features are: 
+- createDB: creates the database schema;
+- feesUpdate: scrapes fees using Vega gRPC API;
+- klinesUpdate: scrapes assets to USD conversion rates from Binance;
+- candleUpdate: scrapes 15min candles using Vega gRPC API;
 
 ## Grafana configuration
 On Grafana, you would need to perform the following steps:
